@@ -18,6 +18,11 @@ public class ItemValidador {
 		if(ehVazio(codigo) || codigo.length() != 3){
 			erros.add("Codigo invalido");
 		}
+		
+		
+		if (ehVazio(item.getCodigo())|| item.getCodigo().length() !=3){
+			erros.add("Codigo invalido");
+		}
 
 		String nome = item.getNome();
 		if(ehVazio(nome) || nome.length() < 3){

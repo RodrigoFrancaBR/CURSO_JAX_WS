@@ -72,3 +72,48 @@ Entre outros ...
 Nesse treinamento focaremos no estilo RPC (Remote Procedure Call). Objetivo desse estilo de integração é chamar um procedimento remotamente (via rede usamos HTTP com SOAP). No mundo Java este procedimento é um método.
 
 RPC segue o modelo cliente-server (síncrono) que já testamos nesse capítulo. O SoapUI foi o cliente e rodamos o server através do JRE!
+
+As anotações @WebService, @WebMethod e @WebResult são da especificação JAX-WS. A anotação @XmlElement é do JAX-B e serve para redefinir o nome do elemento no XML (entre outras funções).
+
+O JAX-WS usa por baixo dos panos o JAX-B para gerar o XML. Importante é que todas as anotações tem um impacto no XML WSDL e SOAP gerado.
+A anotação para manipular o retorno é o @WebResult
+SOAP usa o padrão Wrapped (embrulhado)
+essa TAG <ns2:todosOsItensResponse> 
+é usada para indicar de qual método veio essa resposta. No nosso caso, do método todosItens anotado com @WebMethod(operationName="todosOsItens").
+No mundo Java Web existe o JSESSIONID que representa um token utilizado em aplicações Web. O padrão de autenticação e autorização OAuth também usa um token. Enfim, o nosso sistema não vai reinventar a roda e também usará um token!
+O header que indica que o parâmetro deve ser adicionado ao cabeçalho:
+Fault no WSDL
+No mundo SOAP não existem exceções e sim Faults. Uma exceção no mundo Java é traduzido para um Fault.
+Um Fault possui um faultcode que indica se o problema foi do servidor ou do cliente, o faultstring com uma mensagem mais amigável e um detail que é a instância da exceção serializada em XML.
+Cabeçalhos servem para guardar informações dados da aplicação
+o elemento Header vem antes do Body
+A anotação @WebParam serve para definir o Header
+Exceptions são mapeadas para Faults
+Em ambiente SOAP é bem comum trabalharmos com alguns intermediários entre cliente e server que validam os Headers e até os manipulam. 
+um intermediário que verifica os dados de autenticação/autorização antes da mensagem chegar no servidor final.
+outro poderia fazer uma auditoria para logar informações importantes do que está sendo feito.
+nós o chamamos de Node (nó):
+
+No mundo Java as exceções são mapeadas para Faults. O JAX-WS define duas categorias ou tipos de exceções:
+
+Modeled (Modelado) - Para mapear uma exceção explicitamente a partir da lógica de negócios no código Java. As definições desse Fault estão no arquivo WSDL, as falhas SOAP são previstas no WSDL.
+
+Unmodeled (Não modelado) - Para mapear uma exceção (normalmente do tipo java.lang.RuntimeException) que acontecerá em tempo de execução se alguma lógica falha. Neste caso, as exceções Java são representados como falha SOAP genérico.
+
+unchecked não aparecem no wsdl
+Cada Fault deve ter no mínimo um <faultcode> e <faultstring>
+Para alterar o conteúdo do elemento <detail> é preciso um método getFaultInfo():
+
+<faultcode> - Server ou Client para indicar onde ocorreu o problema, mas existem outros como VersionMissmatch
+<faultstring> - uma explicação do Fault legível para humanos
+<detail> - mais informações sobre o Fault, normalmente específicas da aplicação
+O <faultcode> e <faultstring> são obrigatórios.
+
+new ItemValidador(item).validate(). Ao chamar o validador lança uma ItemValidadorException caso o item esteja inválido. Essa exceção é unchecked, ou seja, não faz parte do WSDL.
+
+não temos mais um <detail> mas sim um fault
+<S:Fault xmlns:ns4="http://www.w3.org/2003/05/soap-envelope">
+
+O Fault é mais genérico, não possui um elemento <detail>. A exceção não faz parte do WSDL, nem adianta colocar @WebFault.
+Devemos agora dizer na nossa classe TokenUsuario que gostariamos de usar o Adapter que criamos para o atributo dataValidade. Para isso, usaremos a anotação @XmlJavaTypeAdapter:
+precisamos dizer que essa classe é um adapter do JAX-B. Para isso, iremos extender a classe abstrata XmlAdapter.
