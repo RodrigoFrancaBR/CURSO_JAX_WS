@@ -146,7 +146,7 @@
    <soapenv:Header>\r
       <ws:tokenUsuario>\r
          <token>AAA</token>\r
-         <dataValidade>2012-12-12T00:00:00</dataValidade>\r
+          <dataValidade>31/12/2015</dataValidade>
       </ws:tokenUsuario>\r
    </soapenv:Header>\r
    <soapenv:Body>\r

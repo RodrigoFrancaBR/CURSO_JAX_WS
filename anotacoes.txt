@@ -117,3 +117,13 @@ não temos mais um <detail> mas sim um fault
 O Fault é mais genérico, não possui um elemento <detail>. A exceção não faz parte do WSDL, nem adianta colocar @WebFault.
 Devemos agora dizer na nossa classe TokenUsuario que gostariamos de usar o Adapter que criamos para o atributo dataValidade. Para isso, usaremos a anotação @XmlJavaTypeAdapter:
 precisamos dizer que essa classe é um adapter do JAX-B. Para isso, iremos extender a classe abstrata XmlAdapter.
+O XSD ou XML Schema ou apenas Schema descreve a estrutura de um documento XML. O XSD define como se compor uma mensagem SOAP, o que pode aparecer no XML, quantas vezes, quais tipos, nomenclatura etc. Segue um exemplo do token do usuário no XSD:
+O elemento <message> descreve os dados a serem trocados entre cliente e servidor. Ou seja, cada mensagem representa uma entrada ou saída.
+
+Dentro de um elemento <message> vem os part que associam um tipo concreto do XSD.
+Os elementos que definem o WSDL abstrato são: <types>, <message> e <portType>. Assim que temos os elementos <binding> e <service> o WSDL se torna concreto.
+
+Concreto significa que há informações sobre o encoding
+O <portType> é parecido com uma interface Java e define as operações com entrada e saída.
+Um <portType> pode ter várias operations e para ser correto, nem sempre uma operação precisa ter entrada E saída.
+queremos é criar um serviço de "mão única". Deixando claro aos clientes que esse serviço não terá resposta e que ele não precisará esperar pelo processamento da requisição. Fazemos isso anotando o método (de retorno void) com @Oneway.
