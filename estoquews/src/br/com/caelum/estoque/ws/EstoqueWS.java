@@ -6,6 +6,8 @@ import javax.jws.WebMethod;
 import javax.jws.WebParam;
 import javax.jws.WebResult;
 import javax.jws.WebService;
+import javax.jws.soap.SOAPBinding;
+import javax.jws.soap.SOAPBinding.Style;
 import javax.xml.ws.ResponseWrapper;
 
 import br.com.caelum.estoque.modelo.item.Filtro;
@@ -30,7 +32,7 @@ public class EstoqueWS {
 	 * dao.todosItens(); ListaItens listaItens = new ListaItens(todosItens);
 	 * return listaItens; }
 	 */
-
+	// @SOAPBinding(style=Style.RPC)
 	@WebMethod(operationName = "todosOsItens")
 	@ResponseWrapper(localName = "itens")
 	@WebResult(name = "item")

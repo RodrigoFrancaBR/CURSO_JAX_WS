@@ -85,12 +85,19 @@
       <xs:element name="nome" type="xs:string"/>
       <xs:element name="tipo" type="xs:string"/>
       <xs:element name="quantidade" type="xs:int"/>
+      <xs:element name="filtros" type="tns:filtro" nillable="true" minOccurs="0" maxOccurs="unbounded"/>
+    </xs:sequence>
+  </xs:complexType>
+  <xs:complexType name="filtro">
+    <xs:sequence>
+      <xs:element name="nome" type="xs:string" minOccurs="0"/>
+      <xs:element name="tipo" type="tns:tipoItem" minOccurs="0"/>
     </xs:sequence>
   </xs:complexType>
   <xs:complexType name="tokenUsuario">
     <xs:sequence>
       <xs:element name="token" type="xs:string"/>
-      <xs:element name="dataValidade" type="xs:dateTime"/>
+      <xs:element name="dataValidade" type="xs:string"/>
     </xs:sequence>
   </xs:complexType>
   <xs:complexType name="cadastrarItemResponse">
@@ -106,12 +113,6 @@
   <xs:complexType name="filtros">
     <xs:sequence>
       <xs:element name="filtro" type="tns:filtro" minOccurs="0" maxOccurs="unbounded"/>
-    </xs:sequence>
-  </xs:complexType>
-  <xs:complexType name="filtro">
-    <xs:sequence>
-      <xs:element name="nome" type="xs:string" minOccurs="0"/>
-      <xs:element name="tipo" type="tns:tipoItem" minOccurs="0"/>
     </xs:sequence>
   </xs:complexType>
   <xs:complexType name="itens">
@@ -142,10 +143,10 @@
          </filtros>\r
       </ws:todosOsItens>\r
    </soapenv:Body>\r
-</soapenv:Envelope>]]></con:request><con:credentials><con:authType>No Authorization</con:authType></con:credentials><con:jmsConfig JMSDeliveryMode="PERSISTENT"/><con:jmsPropertyConfig/><con:wsaConfig mustUnderstand="NONE" version="200508" action="http://ws.estoque.caelum.com.br/EstoqueWS/todosOsItensRequest"/><con:wsrmConfig version="1.2"/></con:call></con:operation><con:operation id="6e8124ae-aa8a-4bd7-b799-a0cc669136ec" isOneWay="false" action="" name="cadastrarItem" bindingOperationName="cadastrarItem" type="Request-Response" inputName="" receivesAttachments="false" sendsAttachments="false" anonymous="optional"><con:settings/><con:call id="31e35fda-39a3-4ac3-a56e-498bd3e23b5d" name="Request 1"><con:settings><con:setting id="com.eviware.soapui.impl.wsdl.WsdlRequest@request-headers">&lt;xml-fragment/></con:setting></con:settings><con:encoding>UTF-8</con:encoding><con:endpoint>http://localhost:8080/estoquews</con:endpoint><con:request><![CDATA[<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ws="http://ws.estoque.caelum.com.br/">\r
+</soapenv:Envelope>]]></con:request><con:credentials><con:authType>No Authorization</con:authType></con:credentials><con:jmsConfig JMSDeliveryMode="PERSISTENT"/><con:jmsPropertyConfig/><con:wsaConfig mustUnderstand="NONE" version="200508" action="http://ws.estoque.caelum.com.br/EstoqueWS/todosOsItensRequest"/><con:wsrmConfig version="1.2"/></con:call></con:operation><con:operation id="6e8124ae-aa8a-4bd7-b799-a0cc669136ec" isOneWay="false" action="" name="cadastrarItem" bindingOperationName="cadastrarItem" type="Request-Response" inputName="" receivesAttachments="false" sendsAttachments="false" anonymous="optional"><con:settings/><con:call id="3dbf6ffa-a4b9-4268-9f1c-44693b26e1af" name="Request 1"><con:settings><con:setting id="com.eviware.soapui.impl.wsdl.WsdlRequest@request-headers">&lt;xml-fragment/></con:setting></con:settings><con:encoding>UTF-8</con:encoding><con:endpoint>http://localhost:8080/estoquews</con:endpoint><con:request><![CDATA[<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ws="http://ws.estoque.caelum.com.br/">\r
    <soapenv:Header>\r
       <ws:tokenUsuario>\r
-         <token>AAA</token>\r
+      <token>AAA</token>
           <dataValidade>31/12/2015</dataValidade>
       </ws:tokenUsuario>\r
    </soapenv:Header>\r
@@ -153,10 +154,17 @@
       <ws:cadastrarItem>\r
          <!--Optional:-->\r
          <item>\r
-            <codigo>MEA</codigo>\r
-            <nome>MEAN</nome>\r
-            <tipo>Livro</tipo>\r
-            <quantidade>5</quantidade>\r
+           <codigo>MEA</codigo>
+            <nome>MEAN</nome>
+            <tipo>Livro</tipo>
+            <quantidade>5</quantidade>
+            <!--Zero or more repetitions:-->\r
+            <filtros>\r
+               <!--Optional:-->\r
+               <nome>teste</nome>\r
+               <!--Optional:-->\r
+               <tipo>Livro</tipo>\r
+            </filtros>\r
          </item>\r
       </ws:cadastrarItem>\r
    </soapenv:Body>\r

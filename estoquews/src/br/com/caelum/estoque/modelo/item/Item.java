@@ -1,5 +1,7 @@
 package br.com.caelum.estoque.modelo.item;
 
+import java.util.List;
+
 import javax.xml.bind.annotation.XmlAccessType;
 import javax.xml.bind.annotation.XmlAccessorType;
 import javax.xml.bind.annotation.XmlElement;
@@ -17,6 +19,10 @@ public class Item {
 	private String tipo;
 	@XmlElement(required=true)
 	private int quantidade;
+	
+	private List<Filtro> filtros;
+	
+	// private Filtros filtro;
 
 	Item() {
 		super();
@@ -82,6 +88,33 @@ public class Item {
 		return "Item [codigo=" + codigo + ", nome=" + nome + ", tipo=" + tipo + ", quantidade="
 				+ quantidade + "]";
 	}
+	
+	
+		
+/*
+	public Filtros getFiltro() {
+		return filtro;
+	}
+
+	public void setFiltro(Filtros filtro) {
+		this.filtro = filtro;
+	}
+
+*/
+	
+	
+	
+	
+
+	public List<Filtro> getFiltros() {
+		return filtros;
+	}
+
+	public void setFiltros(List<Filtro> filtros) {
+		this.filtros = filtros;
+	}
+
+
 
 	public static class Builder {
 		
@@ -113,6 +146,8 @@ public class Item {
 		public Item build() {
 			return new Item(this.codigo,this.nome,this.tipo,this.quantidade);
 		}
+		
+		
 		
 	}
 	

@@ -127,3 +127,338 @@ Concreto significa que há informações sobre o encoding
 O <portType> é parecido com uma interface Java e define as operações com entrada e saída.
 Um <portType> pode ter várias operations e para ser correto, nem sempre uma operação precisa ter entrada E saída.
 queremos é criar um serviço de "mão única". Deixando claro aos clientes que esse serviço não terá resposta e que ele não precisará esperar pelo processamento da requisição. Fazemos isso anotando o método (de retorno void) com @Oneway.
+
+O protocolo HTTP é utilizado por baixo dos panos como um protocolo de transporte (/soap/http).
+o SOAP não depende do HTTP e poderia ser transportado através de outros protocolos.
+ Aqui o estilo se chama de Document mas existe também o RPC.
+
+ Serviços web podem ser utilizados de maneira diferente. No nosso caso publicamos o serviço para o cliente chamar alguns métodos remotamente. O cliente envia uma requisição SOAP para executar o método ou procedimento no servidor. Para atender essa forma de chamada foi criado o estilo RPC que significa R*emote *Procedure Call (Chamada remota de um procedimento) um estilo de integração muito antigo que foi criado muito antes do mundo SOAP. Para usar RPC com SOAP devemos enviar primeiro o nome do método ou procedimento e, logo abaixo, os parâmetros. Algo assim:
+
+ <soapenv:Envelope ...>
+   <soapenv:Body>
+      <ws:CadastrarItem>
+         <item>
+            <codigo>MEA</codigo>
+            <nome>MEAN</nome>
+            <tipo>Livro</tipo>
+            <quantidade>5</quantidade>
+         </item>
+      </ws:CadastrarItem>
+   </soapenv:Body>
+</soapenv:Envelope>
+
+Você pode testar o estilo RPC, basta anotar a classe EstoqueWS com a anotação @SOAPBinding:
+@WebService
+@SOAPBinding(style=Style.RPC)
+public class EstoqueWS {
+
+Para ver a diferença é preciso republicar o serviço. O WSDL mudou um pouco já que agora estamos usando o estilo RPC:
+
+<soap:binding transport="http://schemas.xmlsoap.org/soap/http" style="rpc"/>
+
+O estilo Document
+Novamente, existem formas diferentes de se comunicar no mundo de serviços web. Por exemplo: quando uma loja recebe uma compra de um produto é gerado um pedido. Imagine que a partir desse pedido devemos notificar um sistema de notas fiscais. Queremos apenas entregar o pedido e o que esse sistema de notas fiscais realmente fará com esse pedido não interessa para a loja. Ou seja, não estamos interessados em chamar algum método ou procedimento do outro sistema. Apenas queremos notificar e entregar o pedido. Nesse caso faz sentido enviar apenas os dados do pedido na mensagem SOAP, por exemplo:
+
+<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:ws="http://ws.estoque.caelum.com.br/">
+   <soapenv:Body>
+            <pedido>
+               <numero>123</numero>
+               <data>22/07/2015</data>
+               <!-- outras infos omitidas -->
+            </pedido>
+   </soapenv:Body>
+</soapenv:Envelope>
+
+Problemas do RPC
+
+Realmente o nosso serviço usa o estilo de integração RPC. No entanto, ao expor serviços dessa maneira muitas vezes o XML fica muito amarrado a aplicação. Isso pode gerar uma acoplamento forte e criar problemas de compatibilidade que dificulta a integração heterogênea. Na realidade, isso significava que muitos vezes um cliente não conseguia se comunicar com um serviço por causa do RPC.
+
+Document/Wrapped
+Para não gerar problemas de compatibilidade, a grande maioria dos serviços usa hoje em dia o estilo Document. O grande problema do Document é que não havia uma forma padrão para fazer RPC! Felizmente isso mudou, como vocês já viram podemos usar o estilo Document para fazer uma chamada remota de um método. Basta embrulhar o documento em um elemento XML como mesmo nome do método! Esse forma se chama de Document/Wrapped. Ou seja, usamos o tempo todo Document/Wrapped para fazer RPC, ok?
+
+Podemos deixar essa configuração explícita, usando a mesma anotação @SOAPBinding mas não é necessário já que é o padrão:
+
+@WebService
+@SOAPBinding(style=Style.DOCUMENT,parameterStyle=ParameterStyle.WRAPPED)
+public class EstoqueWS {
+
+No SOAP temos um elemento Wrapped (com o nome do método) como vimos antes:
+
+<soapenv:Envelope ...>
+   <!-- header omitido -->
+   <soapenv:Body>
+      <ws:CadastrarItem><!-- document/wrapped -->
+         <item>
+            <codigo>?</codigo>
+            <nome>?</nome>
+            <tipo>?</tipo>
+            <quantidade>?</quantidade>
+         </item>
+      </ws:CadastrarItem>
+   </soapenv:Body>
+</soapenv:Envelope>
+
+Document/Bare
+Será que existem serviço do tipo document que não são wrapped? Existem, claro! E já discutimos isso, quando queremos entregar apenas o item sem ter conhecimento de qual método/procedimento é chamado no lado do servidor. Podemos testar isso facilmente usando a mesma anotação @SOAPBinding
+
+@WebService
+@SOAPBinding(style=Style.DOCUMENT,parameterStyle=ParameterStyle.BARE)
+public class EstoqueWS {
+
+Como resultado disso vemos que, a mensagem SOAP gerada não possui mais o elemento wrapped, apenas o item:
+
+<soapenv:Envelope ...>
+    <!-- header omitido -->
+   <soapenv:Body>
+      <ws:item>
+         <codigo>MEA</codigo>
+         <nome>MEAN</nome>
+         <tipo>Livro</tipo>
+         <quantidade>5</quantidade>
+      </ws:item>
+   </soapenv:Body>
+</soapenv:Envelope>
+
+Usando SOAPAction
+Repare que na resposta aparece um elemento SOAPAction sendo uma String vazia. Esse SOAPAction foi criado para mensagens do tipo Document que querem definir o método a ser chamado fora do XML. A configuração do SOAPAction fica no WSDL que se baseia na nossa classe EstoqueWS. Nela podemos aproveitar a anotação @WebMethod para definir a action:
+
+@WebService()
+@SOAPBinding(style=Style.DOCUMENT,parameterStyle=ParameterStyle.BARE)
+public class EstoqueWS {
+
+   //novidade atributo action
+   @WebMethod(action="CadastrarItem", operationName="CadastrarItem") 
+   @WebResult(name="item")
+   public Item cadstrarItem(@WebParam(name="tokenUsuario", header=true) TokenUsuario token, @WebParam(name="item") Item item) throws ItemValidadorException, AutorizacaoException {
+
+   <operation name="CadastrarItem">
+   <soap:operation soapAction="CadastrarItem"/>
+</operation>
+
+O soapAction já existia antes, mas agora está preenchido com o valor da anotação @WebMethod. Ao atualizar o cliente e recriar o request não há nenhuma diferença na mensagem SOAP. A diferença está no protocolo HTTP que ganhou um novo cabeçalho:
+
+SOAPAction: "CadastrarItem"
+
+Através desse cabeçalho o JAX-WS sabe resolver o método correto e podemos executar a requisição sem problemas.
+
+Literal e encoded
+Continuando na nossa viagem pelo WSDL temos em cada operation um input, output e um possível fault. Aqui podemos ver qual mensagem aparece onde. Ela pode ser um input ou output, e fazer parte do body, header ou fault:
+
+<operation name="CadastrarItem">
+   <soap:operation soapAction="CadastrarItem"/>
+   <input>
+      <soap:body use="literal" parts="item"/>
+      <soap:header message="tns:CadastrarItem" part="tokenUsuario" use="literal"/>
+   </input>
+   <output>
+      <soap:body use="literal"/>
+   </output>
+   <fault name="AutorizacaoException">
+      <soap:fault name="AutorizacaoException" use="literal"/>
+   </fault>
+</operation>COPIAR CÓDIGO
+Além disso, tem uma configuração importante, use="literal"! Ela faz parte da codificação da mensagem e significa que na mensagem SOAP apenas dados (literais trafegam, sem nenhuma informação tipos ou regras de validação. Isso faz sentido pois o lugar correto para os tipos e as regras de validação é o XSD.
+
+Infelizmente, essa boa separação dos dados e tipos nem sempre foi assim, pois existe uma outra forma de codificação: o encoded que significa que na mensagem SOAP os tipos são enviados junto aos dados literais. Por isso, não há XSD! Lembra do estilo RPC e os problemas de compatibilidade? Pois é, era muito comum usar RPC/encoded. A mensagem fica parecida com a mensagem a seguir onde também estamos usando RPC/encoded:
+
+<soapenv:Envelope ...>
+   <soapenv:Body>
+    <ws:CadastrarItem>
+      <ws:item>
+         <codigo type="xsd:string">MEA</codigo>
+         <nome type="xsd:string">MEAN</nome>
+         <tipo type="xsd:string">Livro</tipo>
+         <quantidade type="xs:int">5</quantidade>
+      </ws:item>
+    </ws:CadastrarItem>
+   </soapenv:Body>
+</soapenv:Envelope>COPIAR CÓDIGO
+Os dados na mensagem já vem com os tipos. Torna-se mais fácil para nós humanos entendermos, mas gera uma dor de cabeça terrível para validadores de XML. Enfim, não adianta nem discutir muito pois é algo legado, não é aderente a especificação de compatibilidade de serviços SOAP do W3C e deve ser evitado, ok?
+
+Essa forma de codificação fez bastante sucesso (Encoded) e ainda existem serviços web legados que usam isso, mas saiba que o JAX-WS nem dá mais suporte a isso.
+
+O elemento Service - o endereço
+Por fim temos o elemento service que é muito mais simples que define duas coisas. O binding utilizado e o endereço concreto para chamar serviço SOAP. Nesse caso é
+
+<service name="EstoqueWSService">
+   <port name="EstoqueWSPort" binding="tns:EstoqueWSPortBinding">
+      <soap:address location="http://localhost:8080/estoquews"/>
+   </port>
+</service>COPIAR CÓDIGO
+Todo esse tópico merecem uma boa revisão, não? Bora fazer os exercícios :)
+
+O que você aprendeu nesse capítulo?
+Os estilos Document e RPC
+A codificação da mensagem SOAP: literal e encoded
+Usamos Document/literal/Wrapped para fazer RPC
+Encoded é algo legado e JAX-WS não suporta mais
+O elemento service define o endereço
+
+Exemplo de RPC/encoded
+Tudo indica que foi utilizado RPC/encoded pois o nome do método está visível no SOAP e a mensagem possui os tipos codificados (por exemplo xsd:float).
+
+<?xml version="1.0"?>
+<soap:Envelope xmlns:soap="http://www.w3.org/2001/12/soap-envelope" soap:encodingStyle="http://www.w3.org/2001/12/soap-encoding">
+
+<soap:Body xmlns:p="http://www.teste.com.br/parcelas">
+    <soap:body>
+        <p:getValorParcelas>
+            <p:valor xsi:type="xsd:float">500.0</p:valor>
+            <p:qtd xsi:type="xsd:int">5</p:qtd>
+        </p:getValorParcelas>
+    </soap:body>
+</soap:envelope>
+
+o estilo Document é usado para simplesmente passar uma informação. Sem dizer explicitamente qual método será chamado no servidor, já que não é de nossa conta o que irá acontecer com essa informação
+
+codificação encoded a mensagem SOAP também trafega os tipos
+
+Wrapped e Bare não definem como os tipos serão codificados. Wrapped e Bare são configurações utilizadas pelo JAX-WS em conjunto com Document para dizer que queremos embrulhar a mensagem ou não.
+
+o estilo de codificação Encoded traz a facilidade de leitura e como consequência alguns problemas de compatibilidade, validação e desempenho. Segundo a WS-I (Web Services Interoperability Organization) deve-se usar apenas os estilos Document/Literal e RPC/Literal. E o JAX-WS foi projetado para seguir essa limitação.
+
+ Ao codificar usando estilo RPC nosso serviço possui um alto-acoplamento com o código Java. Para evitar problemas de compatibilidade que geram problemas de integração, usamos o estilo Document/Literal Wrapped Pattern;
+
+ O estilo RPC foi projetado para permitir que as operações possam ser chamadas como métodos Java tradicionais. O problema é que a definição de cada método ficará no WSDL, gerando acoplamento.
+
+Por exemplo, em um serviço de calculadora usando o estlo RPC:
+
+@WebService
+@SOAPBinding(style=Style.RPC)
+public class CalculadoraWS {
+
+    @WebMethod(operationName="CalculaMedia")    
+    public double media(@WebParam(name="primeiroNumero") int x,
+                        @WebParam(name="segundoNumero") int y) {
+
+        return ( x + y ) / 2.0;
+
+    }
+}
+
+No WSDL, a seção de mensagens seria algo como:
+
+<message name="CalculaMedia">
+    <part name="primeiroNumero" type="xsd:int"/>
+    <part name="segundoNumero" type="xsd:int"/>
+</message>
+<message name="CalculaMediaResponse">
+    <part name="return" type="xsd:double"/>
+</message>,
+
+Repare que nas mensagens, podemos ver detalhes sobre tipo usado nos parâmetros e no retorno. Caso realizarmos alguma mudança no tipo ou a ordem dos parâmetros, essas alterações afetarão o WSDL.
+
+Transformando o serviço de RPC para Document, podemos ver a diferença:
+
+<message name="CalculaMedia">
+    <part name="parameters" element="tns:CalculaMedia"/>
+</message>
+<message name="CalculaMediaResponse">
+    <part name="parameters" element="tns:CalculaMediaResponse"/>
+</message>
+Repare agora que os parâmetros estão embrulhados em um elemento do tipo CalculaMedia e CalculaMediaResponse. O schema que define esses elementos está em um arquivo separado definido no atributo schemaLocation.
+
+<xs:schema ... >
+    <xs:element name="CalculaMedia" type="tns:CalculaMedia"/>
+    <xs:element name="CalculaMediaResponse" type="tns:CalculaMediaResponse"/>
+    <xs:complexType name="CalculaMedia">
+        <xs:sequence>
+        <xs:element name="primeiroNumero" type="xs:int"/>
+        <xs:element name="segundoNumero" type="xs:int"/>
+        </xs:sequence>
+    </xs:complexType>
+    <xs:complexType name="CalculaMediaResponse">
+        <xs:sequence>
+        <xs:element name="return" type="xs:double"/>
+        </xs:sequence>
+    </xs:complexType>
+</xs:schema>
+
+Uma eventual alteração na assinatura do métodos não afetará o WSDL, já que agora os detalhes sobre os parâmetros da mensagem estão isolados.
+
+Mas afinal, sabemos que mensagens de estilo Document não carregam o nome da operation que executa e portanto, não há uma forma do servidor não identificar o método que deverá ser executado.
+
+Pra isso, colocamos o nome da operation envolvendo os parâmetros de forma parecida com o que fazemos com o estilo RPC. Ou seja, continuamos usando Document para não quebrar a compatibilidade e agora o servidor pode identificar o método chamado.
+
+A este padrão, damos o nome de Document/Literal Wrapped.
+
+O elemento <binding> realiza uma ligação entre o elemento <service> (que define o endereço e o protocolo do serviço) e o elemento <portType> (que define a interface), além de definir detalhes sobre a mensagem SOAP (no elemento <operation>).
+
+Em WSDL abstrato somente definimos a interface, o que é suficiente para implementação do serviço. Deixamos detalhes a respeito do formato da mensagem e de como ela deve ser entregue a cargo do WSDL concreto.
+
+Baixe o WSDL utilizado nesse treinamento disponível nesse link. Coloque o WSDL na pasta src do projeto estoque-web.
+
+4) Agora vamos gerar as classes a partir desse WSDL. Abra um terminal e entre na pasta da instalação do wildfly: wildfly-8.2.0/bin. Nessa pasta deve ter o script wsconsume. Se você usa Windows utiliza-se o wsconsume.bat, no Linux ou Mac usa-se wsconsume.sh.
+
+No Windows, assumindo que a pasta workspace está no C:\ execute:
+
+wsconsume.bat -k -n -o C:\workspace\estoque-web\src C:\workspace\estoque-web\src\EstoqueWSServiceCap5.wsdl
+Ajuste o comando se for necessário e acompanhe a saída para ver eventuais problemas:
+
+Loading FrontEnd jaxws ...
+Loading DataBinding jaxb ...
+wsdl2java -exsh false -d C:\workspac\eestoque-web\src -verbose -allowElementReferences file:C:\workspace\estoque-web/src/EstoqueWSServiceCap5.wsdl
+wsdl2java - Apache CXF 2.7.11
+
+O script wsconsume é apenas um wrapper para simplificar o uso da ferramenta wsdl2java que faz parte da implementação CXF que vem embutida no Wildfly (CXF é uma implementação da especificação JAX-WS). As classes geradas podem ser utilizadas para publicar o serviço ou criar o cliente!
+
+Com o projeto estoque-web criado e classes geradas podemos implementar e publicar o serviços. Se você já implementou o serviço pode pular este exercício.
+
+1) No pacote br.com.caelum.estoque.ws que foi gerado pelo wsdl2java, crie uma nova classe com o nome EstoqueWSImpl. A classe EstoqueWSImpl deve implementar a interface EstoqueWS.
+
+2) Na classe EstoqueWSImpl use a anotação @WebService para definir a interface, nome do serviço e port:
+
+@WebService(endpointInterface="br.com.caelum.estoque.ws.EstoqueWS", 
+serviceName="EstoqueWS", 
+portName="EstoqueWSPort")
+public class EstoqueWSImpl implements EstoqueWS {COPIAR CÓDIGO
+3) Implemente os métodos exigidos pela interface:
+
+    @Override
+    public ListaItens todosOsItens(Filtros filtros) {
+        System.out.println("Chamando todos os Itens");
+        return new ListaItens();
+    }
+
+    @Override
+    public CadastrarItemResponse cadastrarItem(CadastrarItem parameters, TokenUsuario tokenUsuario) throws AutorizacaoFault {
+        System.out.println("Chamando cadastarItem");
+        return new CadastrarItemResponse();
+    }COPIAR CÓDIGO
+Observação: Em ambos os métodos estamos retornando apenas um objeto vazio para deixar o código compilar.
+
+4) Reinicie o JBoss Wildfly no Eclipse e fique atento ao console.
+
+5) Se o servidor subiu sem problemas acesse: http://localhost:8080/estoque-web/EstoqueWS?wsdl
+
+Você deve ver o WSDL publicado.
+
+Vimos duas abordagens de criar um Web Service SOAP no treinamento: Contract first e Contract last
+
+Produzir um serviço a partir de um WSDL é chamado de Contract first. Gerar o WSDL a partir de uma classe Java, ou seja implementar primeiro o serviço (e o resto é gerado) é chamado do Contract last.
+
+O Contract first pode ser usado quando temos um serviço já exposto e queremos migrá-lo para outra linguagem/plataforma, por exemplo, ou quando você tiver escrito o WSDL do zero, sem ser a partir de uma classe como fizemos no exercício anterior.
+
+Uma vantagem do Contract first é que equipes diferentes podem começar a trabalhar ao mesmo tempo, uma trabalhando na implementação do servidor, e outra no cliente. Uma vez que o contrato (WSDL) está definido os dois lados estão desacoplados.
+
+Outra vantagem do Contract first é uma definição mais clara do serviço. Ou seja, como não estamos escrevendo alguma implementação, o foco é o contrato e seus detalhes. Tópicos como expressividade, versionamento do serviço, granularidade e os tipos expostos são discutidos muito antes da implementação.
+
+A API exposta é sempre o WSDL e os tipos (o schema), ambos os documentos devem ser legíveis e bem escritos. A implementação é apenas um detalhe.
+
+Sabendo disso, você consegue imaginar alguma desvantagem do Contract First?
+
+Como desvantagem podemos notar que é preciso conhecer bem as especificações relacionadas aos Web Services que são WSDL e XSD, em geral é preciso dominar o mundo XML. Com Contract first não basta conhecer algumas anotações da plataforma e gerar as classes. Contract last é muito mais simples pois abstrai todo o mundo SOAP/WSDL pois o WSDL e XSD são gerados.
+
+Nesse treinamento estamos usando a especificação JAX-WS para publicar um serviço SOAP.
+
+No mundo Java EE, qualquer especificação possui uma implementação. Alias, normalmente existem várias implementações. Com JAX-WS isso não é diferente. A implementação referencial vem com o JRE e faz parte do projeto Metro: https://metro.java.net/ que usamos no início do treinamento.
+
+Uma outra implementação é a CXF, muito popular e vem embutida no servidor JBoss Wildfy: http://cxf.apache.org/. No entanto o CXF não depende do JBoss e pode ser utilizado no Tomcat e standalone.
+
+Por último existe a implementação Axis2, também da Apache: http://axis.apache.org/axis2/java/core/index.html
+
+O aluno atento talvez percebeu que o no site do CXF também se encontram informações como publicar serviços REST. Para ser correto o CXF é um Service Framework que atende ambos, SOAP e REST. Para o mundo SOAP o CXF implementa o JAX-WS, para atender um mundo REST segue a especificação JAX-RS!
+
+Como estamos rodando nossos serviços em um servidor de aplicação, podemos fazer uso dos beans especiais que são gerenciados pelo container que cuida de oferecer toda a gama de recursos de infra-estrutura através da inversão de controle. Chamamos eles de EJB.
+
+A questão é que podemos transformar nosso WebService em um EJB. Faça uma pequena pesquisa (caso você não conheça) e descubra como implementar um serviço sendo EJB.
