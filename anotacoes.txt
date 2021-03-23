@@ -462,3 +462,60 @@ O aluno atento talvez percebeu que o no site do CXF também se encontram informa
 Como estamos rodando nossos serviços em um servidor de aplicação, podemos fazer uso dos beans especiais que são gerenciados pelo container que cuida de oferecer toda a gama de recursos de infra-estrutura através da inversão de controle. Chamamos eles de EJB.
 
 A questão é que podemos transformar nosso WebService em um EJB. Faça uma pequena pesquisa (caso você não conheça) e descubra como implementar um serviço sendo EJB.
+
+Como vimos, o estilo Document é usado para simplesmente passar uma informação enquanto RPC foi pensado para chamar uma operação remotamente. Uma alternativa ao RPC é o padrão Document/Wrapped.
+
+com a instalação do JRE já vem também uma implementação do JAX-WS. No caso da JRE da Oracle já vem com a implementação JAX-WS que se chama Metro.
+nada impediu criar o serviço web usando a JRE apenas, no entanto para gerar o cliente é preciso ter o JDK instalado. Uma vez criadas as classes do cliente basta também o JRE apenas.
+O Metro possui uma ferramenta, o wsimport (e justamente essa ferramenta só vem com o JDK), que consegue gerar as classes que acessam o serviço de uma maneira transparente. Objetivo do wsimport é o mesmo do wsdl2java, gerar as classes para criar o cliente ou servidor.
+Para tal, basta passar o endereço do WSDL e automaticamente serão criadas todas as classes necessárias para chamar o serviço remoto. O wsimport é um gerador de código para serviços SOAP!
+ vamos criar um novo projeto estoque-cliente (projeto padrão java).
+ Depois disso abra um terminal e entre na pasta do projeto estoque-cliente. Execute na linha de comando:
+
+wsimport -s src -p br.com.caelum.estoque.cliente    http://localhost:8080/estoque/EstoqueWS?wsdl
+
+Repare nos parâmetros que passamos:
+
+-s - diretório dos arquivos .java gerados
+-p - pacote das classes geradas
+As classes geradas são as classes do mapeamento do JAX-B e algumas outras especificas para chamar o serviço. Entre elas temos uma interface Java EstoqueWS e uma classe EstoqueWSService que usaremos mais para frente:
+
+Implementando o cliente e o Port
+Com essas classes prontas já podemos criar o cliente para nosso serviço. A interface EstoqueWS está pronta pra receber algo que se chama de Port. O Port é nada mais do que o objeto que se comunica com o serviço! Ele abstrai todos os detalhes como estabelecer a conexão HTTP e gerar a mensagem SOAP. Em alguns casos ele também é chamado de stub. De qualquer forma, no mundo de padrões de projeto esse objeto também é chamado de proxy ou remote proxy. 3 nomes para a mesma coisa: Port, Stub ou Remote Proxy!
+
+O código é relativamente simples, basta criar uma instancia da classe EstoqueWSService e pedir o Port:
+
+EstoqueWS cliente = new EstoqueWSService().getEstoqueWSPort();
+
+Com o cliente em mãos basta chamar um método do serviço:
+
+Filtro filtro = new Filtro();
+filtro.setNome("IPhone");
+filtro.setTipo(TipoItem.CELULAR);;
+
+ListaItens lista = cliente.todosOsItens(Arrays.<Filtro>asList(filtro));
+
+Pronto, isso já basta para criar a mensagem SOAP de ida, enviar um request HTTP e receber a resposta SOAP. Simples não?
+
+##Outras ferramentas:
+
+Existem outras ferramentas, como o próprio SoapUI, para gerar as classes do cliente a partir do WSDL, como as que vêm com as outras implementações da especificação do JAX-WS, como por exemplo CXF. Até no Eclipse ou Netbeans existem Wizards para criar as classes pela interface gráfica.
+
+Quando criamos o cliente de um serviço SOAP, qual é o papel do Port?
+Representa o objeto que faz a chamada remota.
+
+O Port é o objeto que se comunica com o serviço remotamente. Ele abstrai todos os detalhes como estabelecer a conexão HTTP e gerar a mensagem SOAP.
+
+No mundo de padrões de projeto esse objeto também é chamado de Proxy ou Remote Proxy. Vimos a definição do port no WSDL dentro da seção service:
+
+<service name="EstoqueWSService">
+    <port name="EstoqueWSPort" binding="tns:EstoqueWSPortBinding">
+      <soap:address location="REPLACE_WITH_ACTUAL_URL"/>
+    </port>
+  </service>
+
+  duas ferramentas: wsdl2java que faz parte do CXF e wsimport do Metro.
+  Criar classes a partir de um WSDL para publicar um serviço ou criar um cliente
+  wsimport e wsdl2java são ferramentas de linha de comando para gerar as classes Java a partir do WSDL. As classes geradas ajudam escrever programas no lado do cliente ou servidor para serviços Web e abstraiam todo o trabalho com SOAP e HTTP em geral. Essas classes também são chamadas de stubs de cliente ou esqueletos de servidores.
+
+  analista desenv Sistemas 

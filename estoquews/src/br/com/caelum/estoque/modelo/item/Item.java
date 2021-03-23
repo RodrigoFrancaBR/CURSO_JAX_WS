@@ -24,10 +24,9 @@ public class Item {
 	
 	// private Filtros filtro;
 
-	Item() {
-		super();
+	public Item() {	
 	}
-
+	
 	public Item(String codigo, String nome, String tipo, int quantidade) {
 		super();
 		this.codigo = codigo;
